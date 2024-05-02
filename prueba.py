@@ -30,3 +30,13 @@ if a in arr2:
     print("si funciona pai")
     arr2.remove(a)
     print(arr2)
+    
+dict = {
+    "first":[1,2],
+    "second":[2,3]
+}
+print(len(dict))
+
+open_state = [[1,2],[2,3],[3,4]]
+open_state[0] = [1,3]
+print("Accesando a: " + str(open_state[0][1]))

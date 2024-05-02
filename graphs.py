@@ -20,6 +20,9 @@ class Directed_Graph:
             raise ValueError(f'Node {n2.get_name()} not in graph')
         self.graph_dict[n1].append([n2, weight])
     
+    def get_graph_len(self):
+        return len(self.graph_dict)
+    
     def is_node_in(self, node):
         return node in self.graph_dict
     
@@ -38,9 +41,9 @@ class Directed_Graph:
         #Acomodar para que me devuelva los hijos con la estructura de __str__
         sons = []
         #Obtenemos el objeto nodo deseado
-        node = node[0]
-
-
+        if type_search != "Dijkstra":
+            node = node[0]
+        
         for edge in self.graph_dict[node]:
             node2 = edge[0]
             weight = edge[1]
@@ -49,47 +52,108 @@ class Directed_Graph:
             node2.set_a_cost(node.get_a_cost()+weight)
                 #Actualizamos el costo f
             if type_search == "BestFirst":
-                node2.set_f_cost(node2.get_a_cost())
-            else:
+                node2.set_f_cost(node2.get_a_cost())    
+            elif type_search == "ASearch":
                 node2.set_f_cost(node2.get_a_cost() + node2.get_heuristic())
                 #Agregamos a los hijos el arreglo
-            sons.append([node2, node2.get_f_cost(), node])
-        
-        return sons
-
-
-    def treat_repited_sons(self, sons, open_state, closed_state):
-        #Validamos que haya registros en sons
-        if len(sons) == 0:
-            return None
-        
-        def find_index(arr, value):
-            for idx, sublist in enumerate(arr):
-                if value in sublist:
-                    return idx
-            return -1
-
-        for son in sons:
-            value = son[0]
-            index_open = find_index(open_state,value)
-            index_closed = find_index(closed_state,value)
             
-            if index_open != -1 or index_closed != -1:
-                sons.remove(son)
-
+            if (type_search == "Dijkstra"):
+                sons.append([node2, node2.get_a_cost()])
+            else:
+                sons.append([node2, node2.get_f_cost(), node])
+        
         return sons
 
-    def update_ascending(self, state):
+
+    def treat_repited_sons(self, sons, open_state=None, closed_state=None, type_search = None):
+        #Validamos que haya registros en sons
         
-        for i in range(len(state)):
-            for j in range(len(state)-1-i):
-                if state[j][0].get_f_cost() > state[j+1][0].get_f_cost():
-                    aux = state[j+1]
-                    state[j+1] = state[j]
-                    state[j] = aux
+        if (type_search == None):
+            if len(sons) == 0:
+                return None
+            
+            def find_index(arr, value):
+                for idx, sublist in enumerate(arr):
+                    if value in sublist:
+                        return idx
+                return -1
+
+            for son in sons:
+                value = son[0]
+                index_open = find_index(open_state,value)
+                index_closed = find_index(closed_state,value)
+                
+                if index_open != -1 or index_closed != -1:
+                    sons.remove(son)
         
+        if type_search == "Dijkstra" and open_state is None:
+            elements_to_remove = []
+            # Recopilamos elementos que se deben eliminar
+            for son in sons:
+                son_object = son[0]
+                if son_object in closed_state:
+                    elements_to_remove.append(son)
+
+            # Eliminamos elementos después de la iteración
+            for item in elements_to_remove:
+                sons.remove(item)
+                    
+        elif(type_search == "Dijkstra" and open_state is not None):
+
+            if len(sons) == 0:
+                return open_state
+            
+            def find_index(arr, value):
+                for idx, sublist in enumerate(arr):
+                    if value in sublist:
+                        return idx
+                return -1
+            
+            
+            #Eliminamos los hijos que tengan un mayor peso que en open_state
+            for son in sons:
+                son_object = son[0]
+                son_weight = son[1]
+                
+                index_open = find_index(open_state,son_object)
+                #Si el hijo se encuentra en open_state
+                if index_open != -1:
+                    #Y su peso es mayor en sons se elimina de sons
+                    if son_weight > open_state[index_open][1]:
+                        son_object.set_a_cost(open_state[index_open][1])
+                    else:
+                        #Si su peso en sons es menor que en open_state
+                        #Se modifica el hijo de open
+                        open_state[index_open] = son
+                #Si no esta el hijo dentro de open_state que lo agrege
+                else:
+                    open_state.append(son)
+            #Regresamos el open_state despues de las operaciones    
+            return open_state
+        
+        
+        return sons
+
+    def update_ascending(self, state, type_search = None):
+        #Ordenamos en base al peso temporal
+        if type_search == "Dijkstra":
+            for i in range(len(state)):
+                for j in range(len(state)-1-i):
+                    if state[j][1] > state[j+1][1]:
+                        aux = state[j+1]
+                        state[j+1] = state[j]
+                        state[j] = aux
+        else:     
+            for i in range(len(state)):
+                for j in range(len(state)-1-i):
+                    if state[j][0].get_f_cost() > state[j+1][0].get_f_cost():
+                        aux = state[j+1]
+                        state[j+1] = state[j]
+                        state[j] = aux
+            
         return state
 
+    #Podria los algoritmos de busqueda ingresarlos dentro de otra clase para reescribir sus
     def a_star_best_first_search(self, initial_node, end_node, type_search):
         open_state = []
         closed_state = []
@@ -113,7 +177,40 @@ class Directed_Graph:
                 print(f"{i[0].get_name()} <-- {i[1]} -- {i[2].get_name()}")
         else:
             print("Solucion no encontrada")
-
+    #Dijkstra
+    
+    def dijkstra(self, initial_node, end_node):
+        final_weight = []
+        temporal_weight = []
+        temporal_weight.append([initial_node, 0])
+        current = initial_node
+        graph_len = self.get_graph_len()
+        
+        
+        while(len(final_weight)<graph_len):    
+            sons = self.get_search_sons(current, "Dijkstra")
+            #Tratar repetidos buscando eliminar los hijos que ya esten en final weight 
+            sons = self.treat_repited_sons(sons, closed_state=final_weight, type_search="Dijkstra")
+            #Operamos con temporal weight verificando si ya existen que tengan un menor peso para cambiarlos y si no lo agregamos
+            temporal_weight = self.treat_repited_sons(sons, open_state=temporal_weight, type_search="Dijkstra")
+            #Ordenamos de manera ascendente
+            temporal_weight = self.update_ascending(temporal_weight, "Dijkstra")
+            
+            for nodes in temporal_weight:
+                nodes[0].set_a_cost(nodes[1])
+                
+            current.set_f_cost(temporal_weight[0][1])
+            final_weight.append(current)
+            del temporal_weight[0]
+            if len(temporal_weight)>0:
+                current = temporal_weight[0][0]
+            
+        
+        for i in final_weight:
+            #print(len(final_weight))
+            print(i.get_name() + " " +str(i.get_f_cost()))
+        
+    
     def __str__(self):
         all_edges = ''
         for n1 in self.graph_dict:
@@ -180,29 +277,56 @@ class Node:
     
 def build_graph(graph):
     g = graph()
-    for n in ('a','b','c','d','e','f','g','h'):
+    for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','p'):
         g.add_node(Node(n))
 
-    g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 1))
-    g.add_edge(Edge(g.get_node("a"), g.get_node("c"), 2))
-
-    g.add_edge(Edge(g.get_node("b"), g.get_node("d"), 3))
+    g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 8))
+    g.add_edge(Edge(g.get_node("a"), g.get_node("e"), 4))
+    g.add_edge(Edge(g.get_node("a"), g.get_node("d"), 5))
     
-    g.add_edge(Edge(g.get_node("c"), g.get_node("d"), 4))
-    g.add_edge(Edge(g.get_node("c"), g.get_node("e"), 2))
-    g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 1))
-
-    g.add_edge(Edge(g.get_node("d"), g.get_node("f"), 5))
-    g.add_edge(Edge(g.get_node("d"), g.get_node("g"), 3))
-
-    g.add_edge(Edge(g.get_node("e"), g.get_node("g"), 2))
-
-    g.add_edge(Edge(g.get_node("f"), g.get_node("g"), 2))
-    g.add_edge(Edge(g.get_node("f"), g.get_node("h"), 1))
-
-    g.add_edge(Edge(g.get_node("g"), g.get_node("h"), 2))
+    g.add_edge(Edge(g.get_node("b"), g.get_node("c"), 3))
+    g.add_edge(Edge(g.get_node("b"), g.get_node("f"), 4))
+    g.add_edge(Edge(g.get_node("b"), g.get_node("e"), 12))
     
-    g.a_star_best_first_search(g.get_node("c"), g.get_node("h"), "BestFirst")
+    g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 11))
+    g.add_edge(Edge(g.get_node("c"), g.get_node("f"), 9))
+    
+    g.add_edge(Edge(g.get_node("d"), g.get_node("e"), 9))
+    g.add_edge(Edge(g.get_node("d"), g.get_node("h"), 6))
+    
+    g.add_edge(Edge(g.get_node("e"), g.get_node("f"), 3))
+    g.add_edge(Edge(g.get_node("e"), g.get_node("i"), 8))
+    g.add_edge(Edge(g.get_node("e"), g.get_node("j"), 5))
+    
+    g.add_edge(Edge(g.get_node("f"), g.get_node("g"), 1))
+    g.add_edge(Edge(g.get_node("f"), g.get_node("k"), 8))
+    
+    g.add_edge(Edge(g.get_node("g"), g.get_node("k"), 8))
+    g.add_edge(Edge(g.get_node("g"), g.get_node("l"), 7))
+    
+    g.add_edge(Edge(g.get_node("h"), g.get_node("i"), 2))
+    g.add_edge(Edge(g.get_node("h"), g.get_node("m"), 7))
+    
+    g.add_edge(Edge(g.get_node("i"), g.get_node("j"), 10))
+    g.add_edge(Edge(g.get_node("i"), g.get_node("m"), 6))
+    
+    g.add_edge(Edge(g.get_node("j"), g.get_node("k"), 6))
+    g.add_edge(Edge(g.get_node("j"), g.get_node("n"), 9))
+    
+    g.add_edge(Edge(g.get_node("k"), g.get_node("l"), 5))
+    g.add_edge(Edge(g.get_node("k"), g.get_node("p"), 7))
+    
+    g.add_edge(Edge(g.get_node("l"), g.get_node("p"), 6))
+    
+    g.add_edge(Edge(g.get_node("m"), g.get_node("n"), 2))
+    
+    g.add_edge(Edge(g.get_node("n"), g.get_node("p"), 12))
+    
+    
+    #g.a_star_best_first_search(g.get_node("c"), g.get_node("h"), "BestFirst")
+    
+    #AJUSTAR PARA EN DIJKSTRA PONER EL TYPE DESDE AQUI
+    g.dijkstra(g.get_node("a"), g.get_node("p"))
     return g
 
 G1 = build_graph(Undirected_graph)
