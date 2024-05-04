@@ -1,0 +1,44 @@
+
+def get_next_son_at_level(current_level):
+    level_nodes = []
+    for node in dic_nodes.keys():
+        if node.get_level() = current_level and node.get_usado() == False:
+            level_nodes.append(node)
+    
+    level_nodes = ascending(level_nodes)
+    if len(level_nodes) == 0:
+        return None
+    else:
+        return level_nodes[0]
+    
+nodes_route = []        
+
+current = start_node
+current.set_usado(true)
+
+current_level = 1
+level_asign = 1
+
+
+while current != endnode:
+        nodes_route.append(current.get_name())
+        sons = get_sons(current)
+        if (len(sons) != 0):
+            for son in sons:
+                son.set_father(current)
+                if (son.get_level() == 0)
+                    son.set_level = level_asign
+
+            level_asign++
+            sons = ascending(sons)
+            current = sons[0]
+            current.set_usado(true)
+        else:
+            current = get_next_son_at_level(current_level)
+            while (current == None):
+                current_level ++
+                current = get_next_son_at_level(current_level)
+                
+            current.set_usado(true)
+for i in nodes_route:
+    print(i)
