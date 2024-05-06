@@ -21,10 +21,13 @@ for i in range(len(arr)):
 
 print(arr)
 
-arr2 = [["son", 2, "father"]]
-arr2.extend([["son", 2, "father"]])
+arr2 = [["son", 1, "father"]]
+arr2.extend([["son2", 2, "father2"], ["son3", 3, "father3"]])
 a = "son"
 print(arr2)
+
+for i in arr2:
+    print(i[0])
 
 if a in arr2:
     print("si funciona pai")
@@ -40,3 +43,8 @@ print(len(dict))
 open_state = [[1,2],[2,3],[3,4]]
 open_state[0] = [1,3]
 print("Accesando a: " + str(open_state[0][1]))
+
+def funcion():
+    return ["prueba", "pa"]
+a = funcion()
+print(a)

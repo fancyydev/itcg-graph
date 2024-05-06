@@ -10,6 +10,17 @@ class Directed_Graph:
         # dentro del diccionario
         self.graph_dict[node] = []
     
+    #Reseteamos a los valores por defecto de todos los nodos creados
+    def reset_nodes(self):
+        for node in self.graph_dict.keys():
+            node.set_heuristic(0)
+            node.set_a_cost(0)
+            node.set_f_cost(0)
+            
+            node.set_level(-1)
+            node.set_used(False)
+            node.set_father(None)
+            
     def add_edge(self, edge):
         n1 = edge.get_n1()
         n2 = edge.get_n2()
@@ -35,7 +46,30 @@ class Directed_Graph:
     
     def get_sons(self, node):
         #Acomodar para que me devuelva los hijos con la estructura de __str__
-        return self.graph_dict[node]
+        sons = []
+        for edge in self.graph_dict[node]:
+            node2 = edge[0]
+            weight = edge[1]
+            sons.append([node2, weight])
+            
+        return sons
+    
+    def get_edge(self, node, node_father=None, type_search = None):
+        edges = None
+        if (type_search == "Dijkstra"):
+            for edge in self.graph_dict[node]:
+                node2 = edge[0]
+                weight = edge[1]
+                if (node.get_f_cost()-weight == node2.get_f_cost()):
+                    edges = [node2, weight]
+        else:
+            for edge in self.graph_dict[node]:
+                node2 = edge[0]
+                weight = edge[1]
+                if node2 == node_father:
+                    edges = [node2, weight]
+                
+        return edges
     
     def get_search_sons(self, node, type_search):
         #Acomodar para que me devuelva los hijos con la estructura de __str__
@@ -50,7 +84,8 @@ class Directed_Graph:
             #Dentro del costo acumulado del hijo
             #El coste acumulado va a ser igual a el peso en caso de que la busqueda sea HillClimbing
             if type_search == "HillClimbing":
-                node2.set_a_cost(weight)
+                if node2.get_a_cost() == 0:
+                    node2.set_a_cost(weight)
             else:
                 #Ingresamos la suma del costo acumulado del padre y el peso hacia el nodo    
                 node2.set_a_cost(node.get_a_cost()+weight)
@@ -68,7 +103,6 @@ class Directed_Graph:
                 sons.append([node2, node2.get_f_cost(), node])
         
         return sons
-
 
     def treat_repited_sons(self, sons, open_state=None, closed_state=None, type_search = None):
         #Validamos que haya registros en sons
@@ -183,8 +217,56 @@ class Directed_Graph:
         level_nodes = self.update_ascending(level_nodes, "HillClimbing")
         return level_nodes[0][0]
     
+    def get_road(self, state, start_node, type_search, end_node = None):
+        road = []
+        total_cost = 0
+        #Estructura del state [nodo_hijo, nodo_padre]
+        if (type_search == "HillClimbing"):
+            current = state[len(state)-1][0]
+            road.append(current)
+            while current != start_node:
+                edge = self.get_edge(current, current.get_father())
+                total_cost += edge[1]
+                road.append(edge[0])
+                current = edge[0]
+        #Estructura [nodo_hijo, peso, nodo_padre]
+        elif(type_search == "BestFirst" or type_search == "ASearch"):
+            current = state[len(state)-1][0]
+            father = state[len(state)-1][2]
+            road.append(current)
+            while current != start_node:
+                edge = self.get_edge(current, father)
+                total_cost += edge[1]
+                road.append(edge[0])
+                current = edge[0]
+                for i in state:
+                    if i[0] == current:
+                        father = i[2]
+                        break
+        #Estructura [nodo]
+        elif(type_search == "Dijkstra"):
+            current = end_node
+            road.append(current)
+            while current != start_node:
+                edge = self.get_edge(current, type_search=type_search)
+                total_cost += edge[1]
+                road.append(edge[0])
+                current = edge[0]
+                
+                
+        print("Camino")
+        print("---------------------------")
+        road.reverse()
+        for i in road:
+            print(i)
+        print("---------------------------")
+        print("COSTE TOTAL: " + str(total_cost))
+            
     #Podria los algoritmos de busqueda ingresarlos dentro de otra clase para reescribir sus
     def a_star_best_first_search(self, initial_node, end_node, type_search):
+        if type_search == "ASearch":
+            self.dijkstra(end_node, initial_node, True)
+            
         open_state = []
         closed_state = []
         open_state.append([initial_node,0,initial_node])
@@ -204,11 +286,12 @@ class Directed_Graph:
             del open_state[0]
             closed_state.append(current)
             for i in closed_state:
-                print(f"{i[0].get_name()} <-- {i[1]} -- {i[2].get_name()}")
+                print(f"h = {str(i[0].get_heuristic())} --> {i[0].get_name()} <-- {i[1]} -- {i[2].get_name()}")
+            self.get_road(closed_state,initial_node,type_search)
         else:
             print("Solucion no encontrada")
     #Dijkstra
-    def dijkstra(self, initial_node, end_node):
+    def dijkstra(self, initial_node, end_node, heuristic = False):
         final_weight = []
         temporal_weight = []
         temporal_weight.append([initial_node, 0])
@@ -235,16 +318,32 @@ class Directed_Graph:
                 current = temporal_weight[0][0]
             
         
-        for i in final_weight:
-            #print(len(final_weight))
-            print(i.get_name() + " " +str(i.get_f_cost()))
-    
+            
+        if heuristic:
+            #Usamos el algoritmo para establecer la heuristica
+            for node in final_weight:
+                if node != initial_node:
+                    node.set_heuristic(node.get_f_cost()-1)
+                    node.set_a_cost(0)
+                    node.set_f_cost(0)
+                    
+                    node.set_level(-1)
+                    node.set_used(False)
+                    node.set_father(None)
+        else:
+            #Retornaremos los valores de el camino
+            for i in final_weight:
+                #print(len(final_weight))
+                print(i.get_name() + " " +str(i.get_f_cost()))
+            self.get_road(final_weight,initial_node,"Dijkstra", end_node)
+        
     def hill_climbing(self, initial_node, end_node):
         nodes_route = []
         current = initial_node
         current.set_level(0)
         current.set_used(True)
-        nodes_route.append([current.get_name(),"Raiz"])
+        current.set_father(current)
+        nodes_route.append([current,current])
         
         current_level = 1
         level_asign = 1
@@ -271,11 +370,13 @@ class Directed_Graph:
                     current = self.get_next_son_level(current_level)
                 current.set_used(True) 
             
-            nodes_route.append([current.get_name(),current.get_father().get_name()])
+            nodes_route.append([current,current.get_father()])
         
         for i in nodes_route:
-            print(i[0] + " <--- "+ i[1])
+            print(i[0].get_name() + " <-- "+ str(i[0].get_a_cost()) + " -- "+ i[1].get_name())
         
+        self.get_road(nodes_route, initial_node, "HillClimbing")    
+             
     def __str__(self):
         all_edges = ''
         for n1 in self.graph_dict:
@@ -292,8 +393,6 @@ class Undirected_graph(Directed_Graph):
         Directed_Graph.add_edge(self, edge)
         edge_back = Edge(n1=edge.get_n2(), n2=edge.get_n1(), weight=edge.get_weight())
         Directed_Graph.add_edge(self, edge_back)
-
-
 
 #Un edge esta compuesto por el nodo origen y el nodo destino
 class Edge:
@@ -314,9 +413,9 @@ class Edge:
 #Creamos la clase para manejar los nodos
 class Node:
     #Aqui indicaremos los atributos necesarios para nuestro objeto nodo
-    def __init__(self, name, h=None):
+    def __init__(self, name):
         self.name = name
-        self.h = h
+        self.h = 0
         self.a_cost = 0
         self.f_cost = 0
         
@@ -346,6 +445,9 @@ class Node:
     def get_heuristic(self):
         return self.h
     
+    def set_heuristic(self, h):
+        self.h = h
+    
     def get_a_cost(self):
         return self.a_cost
     
@@ -363,6 +465,33 @@ class Node:
     
 def build_graph(graph):
     g = graph()
+    
+    #ALGORITMO BESTFIRST Y A SEARCH
+    # for n in ('a','b','c','d','e','f','g','h'):
+    #     g.add_node(Node(n))
+        
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 1))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("c"), 2))
+    
+    # g.add_edge(Edge(g.get_node("b"), g.get_node("d"), 3))
+    
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("d"), 4))
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("e"), 2))
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 1))
+    
+    # g.add_edge(Edge(g.get_node("d"), g.get_node("f"), 5))
+    # g.add_edge(Edge(g.get_node("d"), g.get_node("g"), 3))
+    
+    # g.add_edge(Edge(g.get_node("e"), g.get_node("g"), 2))
+    
+    # g.add_edge(Edge(g.get_node("f"), g.get_node("h"), 1))
+    # g.add_edge(Edge(g.get_node("f"), g.get_node("g"), 2))
+
+    # g.add_edge(Edge(g.get_node("g"), g.get_node("h"), 2))
+    
+    # g.a_star_best_first_search(g.get_node("h"), g.get_node("a"), "ASearch")
+    
+    #ALGORITMO DE DIIJKSTRA --------------------------------------------------
     # for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','p'):
     #     g.add_node(Node(n))
 
@@ -408,36 +537,33 @@ def build_graph(graph):
     
     # g.add_edge(Edge(g.get_node("n"), g.get_node("p"), 12))
     
+    # g.dijkstra(g.get_node("a"), g.get_node("n"))
     
-    #g.a_star_best_first_search(g.get_node("c"), g.get_node("h"), "BestFirst")
+    #ALGORITMO DE HILL CLIMBING -----------------------------------------
+    # for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m'):
+    #     g.add_node(Node(n))
     
-    #AJUSTAR PARA EN DIJKSTRA PONER EL TYPE DESDE AQUI
-    #g.dijkstra(g.get_node("a"), g.get_node("p"))
-    
-    for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m'):
-        g.add_node(Node(n))
-    
-    g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 3))
-    g.add_edge(Edge(g.get_node("a"), g.get_node("f"), 5))
-    g.add_edge(Edge(g.get_node("a"), g.get_node("c"), 8))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 3))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("f"), 5))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("c"), 8))
    
-    g.add_edge(Edge(g.get_node("b"), g.get_node("e"), 1))
+    # g.add_edge(Edge(g.get_node("b"), g.get_node("e"), 1))
     
-    g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 9))
-    g.add_edge(Edge(g.get_node("c"), g.get_node("d"), 10))
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 9))
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("d"), 10))
     
-    g.add_edge(Edge(g.get_node("d"), g.get_node("k"), 6))
+    # g.add_edge(Edge(g.get_node("d"), g.get_node("k"), 6))
     
-    g.add_edge(Edge(g.get_node("e"), g.get_node("h"), 4))
-    g.add_edge(Edge(g.get_node("e"), g.get_node("i"), 3))
+    # g.add_edge(Edge(g.get_node("e"), g.get_node("h"), 4))
+    # g.add_edge(Edge(g.get_node("e"), g.get_node("i"), 2))
     
-    g.add_edge(Edge(g.get_node("g"), g.get_node("j"), 7))
-    g.add_edge(Edge(g.get_node("g"), g.get_node("k"), 8))
+    # g.add_edge(Edge(g.get_node("g"), g.get_node("j"), 7))
+    # g.add_edge(Edge(g.get_node("g"), g.get_node("k"), 8))
     
-    g.add_edge(Edge(g.get_node("k"), g.get_node("m"), 5))
-    g.add_edge(Edge(g.get_node("k"), g.get_node("l"), 3))
+    # g.add_edge(Edge(g.get_node("k"), g.get_node("m"), 5))
+    # g.add_edge(Edge(g.get_node("k"), g.get_node("l"), 3))
     
-    g.hill_climbing(g.get_node("a"), g.get_node("m"))
+    # g.hill_climbing(g.get_node("a"), g.get_node("l"))
     
     return g
 
