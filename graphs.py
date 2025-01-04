@@ -107,6 +107,8 @@ class Directed_Graph:
         return sons
 
     def treat_repited_sons(self, sons, open_state=None, closed_state=None, type_search = None):
+        
+        
         #Validamos que haya registros en sons
         elements_to_remove = []
         #Tratamos los repetidos de ASearch y BestFirst
@@ -445,36 +447,26 @@ class Node:
         return self.used
     def get_father(self):
         return self.father
-    
     def set_level(self, level):
         self.level = level
     def set_used(self, used):
         self.used = used
     def set_father(self, father):
         self.father = father
-    
-        
     def get_name(self):
         return self.name
-    
     def get_heuristic(self):
         return self.h
-    
     def set_heuristic(self, h):
         self.h = h
-    
     def get_a_cost(self):
         return self.a_cost
-    
     def set_a_cost(self, a_cost):
         self.a_cost = a_cost
-    
     def get_f_cost(self):
         return self.f_cost
-    
     def set_f_cost(self, f_cost):
         self.f_cost = f_cost
-    
     def __str__(self):
         return self.name
     
