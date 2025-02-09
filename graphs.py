@@ -43,6 +43,7 @@ class Directed_Graph:
             if node_name == n.get_name(): 
                 return n
         print(f'Node {node_name} does not exist in the graph')
+        return None
     
     def get_sons(self, node):
         #Acomodar para que me devuelva los hijos con la estructura de __str__
@@ -54,13 +55,22 @@ class Directed_Graph:
             
         return sons
     
+#Creamos una clase para manejar grafos de tipo no dirigido en conjunto con sus algoritmos de busqueda
+class Undirected_graph(Directed_Graph):
+
+    def add_edge(self, edge):
+        Directed_Graph.add_edge(self, edge)
+        edge_back = Edge(n1=edge.get_n2(), n2=edge.get_n1(), weight=edge.get_weight())
+        Directed_Graph.add_edge(self, edge_back)
+    
+    
     def get_edge(self, node, node_father=None, type_search = None):
         edges = None
         if (type_search == "Dijkstra"):
             for edge in self.graph_dict[node]:
                 node2 = edge[0]
                 weight = edge[1]
-                if (node.get_f_cost()-weight == node2.get_f_cost()):
+                if (round(node.get_f_cost()-weight,2) == node2.get_f_cost()):
                     edges = [node2, weight]
         else:
             for edge in self.graph_dict[node]:
@@ -89,11 +99,13 @@ class Directed_Graph:
                     node2.set_a_cost(weight)
             else:
                 #Ingresamos la suma del costo acumulado del padre y el peso hacia el nodo    
-                node2.set_a_cost(node.get_a_cost()+weight)
+                node2.set_a_cost(round(node.get_a_cost() + weight, 2))
+                #node2.set_a_cost(node.get_a_cost() + weight)
             
             #Actualizamos el costo f
             if type_search == "BestFirst":
                 node2.set_f_cost(node2.get_a_cost())    
+                #node2.set_f_cost(node2.get_a_cost())    
             elif type_search == "ASearch":
                 node2.set_f_cost(node2.get_a_cost() + node2.get_heuristic())
                 #Agregamos a los hijos el arreglo
@@ -257,17 +269,22 @@ class Directed_Graph:
             while current != start_node:
                 edge = self.get_edge(current, type_search=type_search)
                 total_cost += edge[1]
+                print(total_cost, edge[1])
                 road.append(edge[0])
                 current = edge[0]
-                
-                
         print("Camino")
         print("---------------------------")
         road.reverse()
+        node_names = []
         for i in road:
             print(i)
+            node_names.append(i.get_name())
         print("---------------------------")
         print("COSTE TOTAL: " + str(total_cost))
+        
+        return node_names, total_cost
+        
+        
             
     #Podria los algoritmos de busqueda ingresarlos dentro de otra clase para reescribir sus
     def a_star_best_first_search(self, initial_node, end_node, type_search):
@@ -295,7 +312,7 @@ class Directed_Graph:
             closed_state.append(current)
             for i in closed_state:
                 print(f"h = {str(i[0].get_heuristic())} --> {i[0].get_name()} <-- {i[1]} -- {i[2].get_name()}")
-            self.get_road(closed_state,initial_node,type_search)
+            return self.get_road(closed_state,initial_node,type_search)
         else:
             print("Solucion no encontrada")
     #Dijkstra
@@ -316,11 +333,8 @@ class Directed_Graph:
             temporal_weight = self.treat_repited_sons(sons, open_state=temporal_weight, type_search="Dijkstra")
             #Ordenamos de manera ascendente
             temporal_weight = self.update_ascending(temporal_weight, "Dijkstra")
-            
-            # for nodes in temporal_weight:
-            #     nodes[0].set_a_cost(nodes[1])
                 
-            current.set_f_cost(temporal_weight[0][1])
+            current.set_f_cost(round(temporal_weight[0][1], 2))
             final_weight.append(current)
             del temporal_weight[0]
             if len(temporal_weight)>0:
@@ -344,7 +358,9 @@ class Directed_Graph:
             for i in final_weight:
                 #print(len(final_weight))
                 print(i.get_name() + " " +str(i.get_f_cost()))
-            self.get_road(final_weight,initial_node,"Dijkstra", end_node)
+                
+            return self.get_road(final_weight,initial_node,"Dijkstra", end_node)
+            
         
     def hill_climbing(self, initial_node, end_node):
         nodes_route = []
@@ -392,7 +408,7 @@ class Directed_Graph:
         for i in nodes_route:
             print(i[0].get_name() + " <-- "+ str(i[0].get_a_cost()) + " -- "+ i[1].get_name())
         
-        self.get_road(nodes_route, initial_node, "HillClimbing")    
+        return self.get_road(nodes_route, initial_node, "HillClimbing")    
              
     def __str__(self):
         all_edges = ''
@@ -403,13 +419,6 @@ class Directed_Graph:
                 all_edges += n1.get_name() + ' -- ' + str(weight)  + ' --> ' + n2.get_name() + '\n'
         return all_edges
 
-#Creamos una clase para manejar grafos de tipo no dirigido
-class Undirected_graph(Directed_Graph):
-
-    def add_edge(self, edge):
-        Directed_Graph.add_edge(self, edge)
-        edge_back = Edge(n1=edge.get_n2(), n2=edge.get_n1(), weight=edge.get_weight())
-        Directed_Graph.add_edge(self, edge_back)
 
 #Un edge esta compuesto por el nodo origen y el nodo destino
 class Edge:
@@ -496,55 +505,147 @@ def build_graph(graph):
 
     # g.add_edge(Edge(g.get_node("g"), g.get_node("h"), 2))
     
-    # g.a_star_best_first_search(g.get_node("h"), g.get_node("a"), "ASearch")
+    # initial_node = g.get_node("h")
+    # end_node = g.get_node("b")
+    
+    # if (initial_node is not None and end_node is not None):
+    #     r, total_cost = g.a_star_best_first_search(initial_node, end_node, "BestFirst")
+    #     print("resultado de a search o best first")
+    #     print(r)
+    #     print(type(r))
+    #     print(total_cost)
+    #     print(type(total_cost))
+    
+        
     
     #ALGORITMO DE DIIJKSTRA --------------------------------------------------
-    for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','p'):
-        g.add_node(Node(n))
+    # for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','p'):
+    #     g.add_node(Node(n))
 
-    g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 8))
-    g.add_edge(Edge(g.get_node("a"), g.get_node("e"), 4))
-    g.add_edge(Edge(g.get_node("a"), g.get_node("d"), 5))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 8))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("e"), 4))
+    # g.add_edge(Edge(g.get_node("a"), g.get_node("d"), 5))
     
-    g.add_edge(Edge(g.get_node("b"), g.get_node("c"), 3))
-    g.add_edge(Edge(g.get_node("b"), g.get_node("f"), 4))
-    g.add_edge(Edge(g.get_node("b"), g.get_node("e"), 12))
+    # g.add_edge(Edge(g.get_node("b"), g.get_node("c"), 3))
+    # g.add_edge(Edge(g.get_node("b"), g.get_node("f"), 4))
+    # g.add_edge(Edge(g.get_node("b"), g.get_node("e"), 12))
     
-    g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 11))
-    g.add_edge(Edge(g.get_node("c"), g.get_node("f"), 9))
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("g"), 11))
+    # g.add_edge(Edge(g.get_node("c"), g.get_node("f"), 9))
     
-    g.add_edge(Edge(g.get_node("d"), g.get_node("e"), 9))
-    g.add_edge(Edge(g.get_node("d"), g.get_node("h"), 6))
+    # g.add_edge(Edge(g.get_node("d"), g.get_node("e"), 9))
+    # g.add_edge(Edge(g.get_node("d"), g.get_node("h"), 6))
     
-    g.add_edge(Edge(g.get_node("e"), g.get_node("f"), 3))
-    g.add_edge(Edge(g.get_node("e"), g.get_node("i"), 8))
-    g.add_edge(Edge(g.get_node("e"), g.get_node("j"), 5))
+    # g.add_edge(Edge(g.get_node("e"), g.get_node("f"), 3))
+    # g.add_edge(Edge(g.get_node("e"), g.get_node("i"), 8))
+    # g.add_edge(Edge(g.get_node("e"), g.get_node("j"), 5))
     
-    g.add_edge(Edge(g.get_node("f"), g.get_node("g"), 1))
-    g.add_edge(Edge(g.get_node("f"), g.get_node("k"), 8))
+    # g.add_edge(Edge(g.get_node("f"), g.get_node("g"), 1))
+    # g.add_edge(Edge(g.get_node("f"), g.get_node("k"), 8))
     
-    g.add_edge(Edge(g.get_node("g"), g.get_node("k"), 8))
-    g.add_edge(Edge(g.get_node("g"), g.get_node("l"), 7))
+    # g.add_edge(Edge(g.get_node("g"), g.get_node("k"), 8))
+    # g.add_edge(Edge(g.get_node("g"), g.get_node("l"), 7))
     
-    g.add_edge(Edge(g.get_node("h"), g.get_node("i"), 2))
-    g.add_edge(Edge(g.get_node("h"), g.get_node("m"), 7))
+    # g.add_edge(Edge(g.get_node("h"), g.get_node("i"), 2))
+    # g.add_edge(Edge(g.get_node("h"), g.get_node("m"), 7))
     
-    g.add_edge(Edge(g.get_node("i"), g.get_node("j"), 10))
-    g.add_edge(Edge(g.get_node("i"), g.get_node("m"), 6))
+    # g.add_edge(Edge(g.get_node("i"), g.get_node("j"), 10))
+    # g.add_edge(Edge(g.get_node("i"), g.get_node("m"), 6))
     
-    g.add_edge(Edge(g.get_node("j"), g.get_node("k"), 6))
-    g.add_edge(Edge(g.get_node("j"), g.get_node("n"), 9))
+    # g.add_edge(Edge(g.get_node("j"), g.get_node("k"), 6))
+    # g.add_edge(Edge(g.get_node("j"), g.get_node("n"), 9))
     
-    g.add_edge(Edge(g.get_node("k"), g.get_node("l"), 5))
-    g.add_edge(Edge(g.get_node("k"), g.get_node("p"), 7))
+    # g.add_edge(Edge(g.get_node("k"), g.get_node("l"), 5))
+    # g.add_edge(Edge(g.get_node("k"), g.get_node("p"), 7))
     
-    g.add_edge(Edge(g.get_node("l"), g.get_node("p"), 6))
+    # g.add_edge(Edge(g.get_node("l"), g.get_node("p"), 6.5))
     
-    g.add_edge(Edge(g.get_node("m"), g.get_node("n"), 2))
+    # g.add_edge(Edge(g.get_node("m"), g.get_node("n"), 2))
     
-    g.add_edge(Edge(g.get_node("n"), g.get_node("p"), 12))
+    # g.add_edge(Edge(g.get_node("n"), g.get_node("p"), 12.22))
     
-    g.dijkstra(g.get_node("a"), g.get_node("p"))
+    for n in ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'ñ', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'):
+        g.add_node(Node(n))
+    
+    g.add_edge(Edge(g.get_node("a"), g.get_node("b"), 1.5))
+    g.add_edge(Edge(g.get_node("a"), g.get_node("c"), 2.1))
+    
+    g.add_edge(Edge(g.get_node("b"), g.get_node("c"), 1))
+    g.add_edge(Edge(g.get_node("b"), g.get_node("d"), 2.2))
+    
+    g.add_edge(Edge(g.get_node("c"), g.get_node("d"), 1.7))
+    g.add_edge(Edge(g.get_node("c"), g.get_node("f"), 2.3))
+    
+    g.add_edge(Edge(g.get_node("d"), g.get_node("e"), 1.8))
+    
+    g.add_edge(Edge(g.get_node("e"), g.get_node("f"), 2))
+    g.add_edge(Edge(g.get_node("e"), g.get_node("g"), 1.2))
+    
+    g.add_edge(Edge(g.get_node("f"), g.get_node("g"), 1.1))
+    g.add_edge(Edge(g.get_node("f"), g.get_node("i"), 2.6))
+    
+    g.add_edge(Edge(g.get_node("g"), g.get_node("h"), 1.9))
+    g.add_edge(Edge(g.get_node("g"), g.get_node("i"), 1.5))
+    
+    g.add_edge(Edge(g.get_node("h"), g.get_node("k"), 2.2))
+    g.add_edge(Edge(g.get_node("h"), g.get_node("l"), 1.8))
+    
+    g.add_edge(Edge(g.get_node("i"), g.get_node("j"), 1.7))
+    g.add_edge(Edge(g.get_node("i"), g.get_node("l"), 2.4))
+    
+    g.add_edge(Edge(g.get_node("j"), g.get_node("l"), 1.3))
+    g.add_edge(Edge(g.get_node("j"), g.get_node("p"), 2.5))
+    
+    g.add_edge(Edge(g.get_node("k"), g.get_node("l"), 1.4))
+    g.add_edge(Edge(g.get_node("k"), g.get_node("m"), 2.6))
+    
+    g.add_edge(Edge(g.get_node("l"), g.get_node("m"), 1.1))
+    g.add_edge(Edge(g.get_node("l"), g.get_node("ñ"), 2))
+    
+    g.add_edge(Edge(g.get_node("m"), g.get_node("n"), 1.8))
+    
+    g.add_edge(Edge(g.get_node("n"), g.get_node("o"), 1.2))
+    g.add_edge(Edge(g.get_node("n"), g.get_node("u"), 2.9))
+    
+    g.add_edge(Edge(g.get_node("ñ"), g.get_node("o"), 1.3))
+    g.add_edge(Edge(g.get_node("ñ"), g.get_node("p"), 1.5))
+    g.add_edge(Edge(g.get_node("ñ"), g.get_node("q"), 2.1))
+    
+    g.add_edge(Edge(g.get_node("o"), g.get_node("u"), 1.7))
+    
+    g.add_edge(Edge(g.get_node("p"), g.get_node("r"), 1.8))
+    g.add_edge(Edge(g.get_node("p"), g.get_node("s"), 2.4))
+    
+    g.add_edge(Edge(g.get_node("q"), g.get_node("r"), 1.6))
+    g.add_edge(Edge(g.get_node("q"), g.get_node("u"), 2.8))
+    
+    g.add_edge(Edge(g.get_node("r"), g.get_node("s"), 1.2))
+    g.add_edge(Edge(g.get_node("r"), g.get_node("t"), 2.2))
+    g.add_edge(Edge(g.get_node("r"), g.get_node("u"), 1.5))
+    
+    g.add_edge(Edge(g.get_node("s"), g.get_node("v"), 2.7))
+    
+    g.add_edge(Edge(g.get_node("t"), g.get_node("w"), 1.8))
+    
+    g.add_edge(Edge(g.get_node("u"), g.get_node("y"), 1.9))
+    g.add_edge(Edge(g.get_node("u"), g.get_node("w"), 2.5))
+    
+    g.add_edge(Edge(g.get_node("v"), g.get_node("w"), 1.7))
+    g.add_edge(Edge(g.get_node("v"), g.get_node("x"), 2.4))
+    
+    g.add_edge(Edge(g.get_node("w"), g.get_node("x"), 1.1))
+    g.add_edge(Edge(g.get_node("w"), g.get_node("y"), 2.3))
+    
+    g.add_edge(Edge(g.get_node("x"), g.get_node("y"), 1.8))
+    g.add_edge(Edge(g.get_node("x"), g.get_node("z"), 2.7))
+    
+    g.add_edge(Edge(g.get_node("y"), g.get_node("z"), 1.4))
+    r, total_cost = g.dijkstra(g.get_node("a"), g.get_node("z"))
+    print("resultado de dijkstra")
+    print(r)
+    print(type(r))
+    print(total_cost)
+    print(type(total_cost))
     
     #ALGORITMO DE HILL CLIMBING -----------------------------------------
     # for n in ('a','b','c','d','e','f','g','h','i','j','k','l','m'):
@@ -575,3 +676,4 @@ def build_graph(graph):
     return g
 
 G1 = build_graph(Undirected_graph)
+
